@@ -1,0 +1,36 @@
+stages:
+  - lint
+  - security
+  - build
+
+# ЭТАП 1: Линтер (НЕ блокирует сборку)
+lint-dockerfile:
+  stage: lint
+  image: hadolint/hadolint:latest-debian
+  script:
+    - hadolint --config .hadolint.yaml Dockerfile || true
+  allow_failure: true
+  artifacts:
+    when: always
+    paths:
+      - hadolint_report.txt
+
+# ЭТАП 2: Сканер (ПАДАЕТ при CRITICAL и сохраняет отчет)
+scan-vulnerabilities:
+  stage: security
+  image:
+    name: aquasec/trivy:0.50.1
+    entrypoint: [""]
+  script:
+    - trivy image --skip-db-update --exit-code 1 --severity CRITICAL --format template --template "@contrib/html.tpl" -o trivy_report.html my-app:latest
+  artifacts:
+    when: always
+    paths:
+      - trivy_report.html
+  allow_failure: false
+
+# ЭТАП 3: Заглушка для сборки
+build-image:
+  stage: build
+  script:
+    - echo "Build successful"
